@@ -1,0 +1,134 @@
+---
+title: "Google Capstone"
+author: "russell"
+date: "1/12/2022"
+output:
+  html_document:
+    df_print: paged
+---
+library(dplyr)
+library(magrittr)
+library(knitr)
+## import dataset
+
+```{r}
+sleep<- read.csv("/Users/russellccc/Desktop/Bikedata/sleepDay_merged.csv")
+calories<- read.csv("/Users/russellccc/Desktop/Bikedata/dailyCalories_merged.csv")
+```
+
+## Preview on datasets
+
+```{r}
+head(sleep)
+head(calories)
+colnames(sleep)
+colnames(calories)
+```
+
+## Count duplicate
+
+```{r}
+sum(duplicated(sleep))
+sum(duplicated(calories))
+```
+
+## clean the duplicate
+
+```{r}
+sleep=unique(sleep)
+sum(duplicated(sleep))
+```
+
+```{r}
+calories <- calories %>%
+  rename(Date=ActivityDay)
+sleep <- sleep %>% 
+  rename(Date=SleepDay)
+```
+
+```{r}
+calories<- calories %>% 
+  mutate(Date = as_date(Date,format ="%m/%d/%Y"))
+head(calories)
+```
+
+```{r}
+sleep<- sleep %>% 
+  mutate(Date = as_date(Date,format ="%m/%d/%Y"))
+head(sleep)
+```
+
+## cleaning names
+
+```{r}
+clean_names(sleep)
+```
+
+```{r}
+clean_names(calories)
+```
+
+# Analyze the data
+
+##Data Summary
+
+```{r}
+colnames(sleep)
+```
+
+```{r}
+colnames(calories)
+```
+
+```{r}
+sleep %>% 
+  select(TotalMinutesAsleep,TotalTimeInBed) %>% 
+  summary()
+```
+
+```{r}
+calories %>% 
+  select(Calories) %>% 
+  summary()
+```
+
+##Start plotting
+
+```{r}
+ggplot(data=sleep)+
+  geom_point(aes(x=TotalMinutesAsleep,y=TotalTimeInBed, color=TotalMinutesAsleep))
+```
+
+-   Overall positive correlation between minutes asleep and total time in bed
+
+-   There are outliers which suggests people did not sleep long enough even though they spend a lot of time in bed
+
+In this event, we are going to explore how is daily calories consume going to affect sleeping time. We will merge the sleep data with calories to find out the pattern
+
+# Merge two datasets and start analyze
+
+```{r}
+cal_sleep <- merge(calories, sleep, by = c("Id", "Date"), all = TRUE)
+head(cal_sleep)
+colnames(cal_sleep)
+```
+
+## clean the dataset
+
+```{r}
+clean_names(cal_sleep)
+cal_sleep <- cal_sleep %>%
+mutate_if(is.numeric, ~replace(., is.na(.),0))
+sum(is.na(cal_sleep))
+```
+
+```{r}
+cal_sleep <-cal_sleep %>% 
+  mutate(cal_sleep, Sleeping_Hours = case_when(TotalMinutesAsleep >360 & TotalMinutesAsleep <= 480 ~ "6h-8h",TotalMinutesAsleep >480 ~"Over 8h", TRUE ~"<6h"))
+view(cal_sleep)
+```
+
+```{r}
+ggplot(data=cal_sleep)+
+  geom_boxplot(aes(x=Sleeping_Hours,y=Calories,fill = Sleeping_Hours))
+```
